@@ -322,13 +322,25 @@ def video_from_file_to_path(video_obj):
         raise ValueError(f"VideoFromFile object does not have get_stream_source method")
 
 def is_audio_dict(value):
-    """Check if value looks like a ComfyUI AUDIO dict."""
-    return isinstance(value, dict) and "waveform" in value and "sample_rate" in value
+    """Check if value looks like a ComfyUI AUDIO dict or LazyAudioMap."""
+    if isinstance(value, dict) and "waveform" in value and "sample_rate" in value:
+        return True
+    if type(value).__name__ == "LazyAudioMap":
+        return True
+    return False
 
 def audio_dict_to_wav_bytes(audio_dict):
-    """Convert ComfyUI AUDIO dict to WAV bytes."""
-    waveform = audio_dict.get("waveform")
-    sample_rate = audio_dict.get("sample_rate", 44100)
+    """Convert ComfyUI AUDIO dict or LazyAudioMap to WAV bytes."""
+    
+    # Use standard dictionary brackets to trigger the lazy loading
+    waveform = audio_dict["waveform"]
+    
+    # Safely get sample rate (not all dictionary-like objects support .get())
+    if hasattr(audio_dict, "get"):
+        sample_rate = audio_dict.get("sample_rate", 44100)
+    else:
+        sample_rate = audio_dict["sample_rate"] if "sample_rate" in audio_dict else 44100
+
     if waveform is None:
         raise ValueError("Audio input missing waveform")
 
